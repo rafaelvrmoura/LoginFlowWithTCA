@@ -11,11 +11,13 @@ import ComposableArchitecture
 struct LoginReducer {
     
     @Dependency(\.emailValidator) var emailValidator
+    @Dependency(\.core) var core
+    @Dependency(\.apiClient) var apiClient
     
     enum LoginError: Error {
         
         case invalidEmail
-        case loginFailed
+        case invalidCredentials
     }
     
     enum InputStatus {
@@ -42,6 +44,8 @@ struct LoginReducer {
         case didTapForgotPasswordButton
         case didTapLoginButton
         case didTapRegisterButton
+        
+        case didLogin(Result<AuthToken, APIError>)
     }
     
     var body: some Reducer<State, Action> {
@@ -66,7 +70,29 @@ struct LoginReducer {
                 state.emailStatus = status
                 return .none
                 
-            case .didTapLoginButton: return .none // TODO: Authenticate
+            case .didTapLoginButton:
+                if state.emailStatus == .valid {
+                    state.error = nil
+                    return login(email: state.email, password: state.password, APIClient: apiClient)
+                } else {
+                    print("Invalid email")
+                    state.error = .invalidEmail
+                    return .none
+                }
+                
+            case .didLogin(let loginResult):
+                switch loginResult {
+                case .success(let token): // TODO: Get user with token
+                    state.error = nil
+                    print("Auth Token - \(token)")
+                    return .none
+                case .failure(let error):
+                    if case .invalidCredentials = error {
+                        print("Invalid credentials")
+                        state.error = .invalidCredentials
+                    }
+                    return .none
+                }
             case .didTapForgotPasswordButton: return .none // TODO: Navigate
             case .didTapRegisterButton: return .none // TODO: Navigate
             }
