@@ -15,32 +15,65 @@ struct LoginView: View {
     var body: some View {
         WithViewStore(self.store, observe: { $0 }) { viewStore in
             ScrollView {
-                VStack(alignment: .leading) {
+                VStack(alignment: .center) {
                     emailField(with: viewStore)
                     .padding([.leading, .trailing])
                     passwordField(with: viewStore)
                     .padding([.leading, .trailing])
-                    Button("Forgot password") {
-                        viewStore.send(.didTapForgotPasswordButton)
-                    }
+                    forgotPasswordButton(with: viewStore)
                     .padding([.leading, .trailing])
-                    HStack {
-                        Spacer()
-                        Button("Login") {
-                            viewStore.send(.didTapLoginButton)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        Spacer()
-                        Button("Create Account") {
-                            viewStore.send(.didTapRegisterButton)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        Spacer()
-                    }
+                    buttonsStack(with: viewStore)
                     .padding()
                 }
             }
             .defaultScrollAnchor(.center)
+        }
+    }
+    
+    @ViewBuilder
+    private func buttonsStack(with viewStore: ViewStoreOf<LoginReducer>) -> some View {
+        VStack(spacing: 10) {
+            loginButton(with: viewStore)
+            Text("or")
+            registerButton(with: viewStore)
+        }
+    }
+    
+    @ViewBuilder
+    private func forgotPasswordButton(with viewStore: ViewStoreOf<LoginReducer>) -> some View {
+        Button(action: {
+            viewStore.send(.didTapForgotPasswordButton)
+        }) {
+          Text("Forgot password")
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        
+    }
+    
+    
+    @ViewBuilder
+    private func loginButton(with viewStore: ViewStoreOf<LoginReducer>) -> some View {
+        Button(action: {
+            viewStore.send(.didTapLoginButton)
+        }) {
+            Text("Login")
+                .foregroundStyle(.white)
+                .frame(width: 200, height: 50)
+                .background {
+                    Color.blue
+                }
+        }
+    }
+    
+    @ViewBuilder
+    private func registerButton(with viewStore: ViewStoreOf<LoginReducer>) -> some View {
+        Button(action: {
+            viewStore.send(.didTapRegisterButton)
+        }) {
+            Text("Create Account")
+                .frame(width: 200, height: 50)
+                .border(.blue)
         }
     }
     
@@ -78,7 +111,8 @@ struct LoginView: View {
     }
     
     // MARK: - Password field
-    func passwordField(with viewStore: ViewStoreOf<LoginReducer>) -> some View {
+    @ViewBuilder
+    private func passwordField(with viewStore: ViewStoreOf<LoginReducer>) -> some View {
         
         SecureField(
             "Password",
