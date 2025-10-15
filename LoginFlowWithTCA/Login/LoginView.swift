@@ -100,6 +100,9 @@ struct LoginView: View {
             },
             withDependencies: {
                 $0.emailValidator = .liveValue
+                $0.loginAPIClient = LoginAPIClient {
+                    return $0.email + $0.password
+                }
             }
         )
     )

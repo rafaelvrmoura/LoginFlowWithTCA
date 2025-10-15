@@ -18,6 +18,7 @@ struct LoginFlowWithTCAApp: App {
         },
         withDependencies: {
             $0.emailValidator = .liveValue
+            $0.loginAPIClient = .liveValue
         }
     )
 

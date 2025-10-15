@@ -12,11 +12,12 @@ struct LoginReducer {
     
     @Dependency(\.emailValidator) var emailValidator
     @Dependency(\.core) var core
-    @Dependency(\.apiClient) var apiClient
+    @Dependency(\.loginAPIClient) var apiClient
     
     enum LoginError: Error {
         
         case invalidEmail
+        case emptyPassword
         case invalidCredentials
     }
     
@@ -35,17 +36,16 @@ struct LoginReducer {
         var error: LoginError? = nil
     }
     
-    enum Action {
+    enum Action: Equatable {
         
         case didChangeEmail(String)
         case didSubmitEmail
         case didChangePassword(String)
-        case emailStatus(LoginReducer.InputStatus)
         case didTapForgotPasswordButton
         case didTapLoginButton
         case didTapRegisterButton
         
-        case didLogin(Result<AuthToken, APIError>)
+        case didLogin(Result<AuthToken, LoginAPIClient.Error>)
     }
     
     var body: some Reducer<State, Action> {
@@ -55,40 +55,39 @@ struct LoginReducer {
             switch action {
             case .didChangeEmail(let email):
                 state.email = email
-                let status: LoginReducer.InputStatus = emailValidator.isValid(email: email) ? .valid : .idle
-                return .send(.emailStatus(status))
+                state.emailStatus = emailValidator.isValid(email: email) ? .valid : .idle
+                return .none
                 
             case .didSubmitEmail:
-                let status: LoginReducer.InputStatus = emailValidator.isValid(email: state.email) ? .valid : .invalid
-                return .send(.emailStatus(status))
+                state.emailStatus = emailValidator.isValid(email: state.email) ? .valid : .invalid
+                return .none
                 
             case .didChangePassword(let password):
                 state.password = password
                 return .none
                 
-            case .emailStatus(let status):
-                state.emailStatus = status
-                return .none
-                
             case .didTapLoginButton:
-                if state.emailStatus == .valid {
-                    state.error = nil
-                    return login(email: state.email, password: state.password, APIClient: apiClient)
-                } else {
-                    print("Invalid email")
+                
+                guard state.emailStatus == .valid else {
                     state.error = .invalidEmail
                     return .none
                 }
+                
+                guard state.password.isEmpty == false else {
+                    state.error = .emptyPassword
+                    return .none
+                }
+                
+                state.error = nil
+                return self.loginEffect(email: state.email, password: state.password)
                 
             case .didLogin(let loginResult):
                 switch loginResult {
                 case .success(let token): // TODO: Get user with token
                     state.error = nil
-                    print("Auth Token - \(token)")
                     return .none
                 case .failure(let error):
                     if case .invalidCredentials = error {
-                        print("Invalid credentials")
                         state.error = .invalidCredentials
                     }
                     return .none
@@ -100,3 +99,29 @@ struct LoginReducer {
     }
 }
 
+// MARK: - Effects
+
+private extension LoginReducer {
+    
+    func loginEffect(email: String, password: String) -> Effect<LoginReducer.Action> {
+        
+        return .run { send in
+            
+            do {
+                
+                let authToken = try await self.apiClient.loginRequest(
+                    LoginRequestModel(
+                        email: email,
+                        password: password
+                    )
+                )
+                
+                return await send(.didLogin(.success(authToken)))
+                
+            } catch LoginAPIClient.Error.invalidCredentials {
+                
+                return await send(.didLogin(.failure(.invalidCredentials)))
+            }
+        }
+    }
+}
