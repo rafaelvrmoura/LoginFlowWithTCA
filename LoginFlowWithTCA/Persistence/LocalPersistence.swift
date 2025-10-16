@@ -9,7 +9,17 @@ typealias UserEmail = String
 
 class LocalPersistence {
     
-    var users: [UserEmail: UserModel] = [:]
+    private var users: [UserEmail: UserModel] = [:]
+    
+    func user(email: String) -> UserModel? {
+            
+        return self.users[email]
+    }
+    
+    func save(user: UserModel) {
+        
+        self.users[user.email] = user
+    }
     
     static var shared: LocalPersistence = {
         

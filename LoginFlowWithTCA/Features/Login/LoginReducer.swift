@@ -21,17 +21,10 @@ struct LoginReducer {
         case invalidCredentials
     }
     
-    enum InputStatus {
-        
-        case invalid
-        case valid
-        case idle
-    }
-    
     struct State: Equatable {
         
         var email: String = ""
-        var emailStatus: LoginReducer.InputStatus = .idle
+        var emailStatus: InputStatus = .idle
         var password: String = ""
         var error: LoginError? = nil
     }

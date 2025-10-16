@@ -22,8 +22,10 @@ extension CoreEnvironment: DependencyKey {
     
     static var dev: CoreEnvironment {
        
-        .init(loggedInUser: UserModel(email: "email@test.com",
+        .init(loggedInUser: UserModel(name: "User Test",
+                                      email: "email@test.com",
                                       password: "password",
+                                      preferredTheme: nil,
                                       photo: nil))
     }
 }

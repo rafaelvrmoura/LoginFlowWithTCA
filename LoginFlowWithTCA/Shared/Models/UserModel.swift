@@ -9,7 +9,9 @@ import Foundation
 
 struct UserModel {
  
+    let name: String
     let email: String
     let password: String
+    let preferredTheme: ThemeModel?
     let photo: Data?
 }

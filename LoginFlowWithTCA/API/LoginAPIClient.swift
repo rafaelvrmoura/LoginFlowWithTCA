@@ -29,7 +29,8 @@ struct LoginAPIClient {
         let password = requestModel.password
         
         // TODO: - Encrypt password
-        guard let user = LocalPersistence.shared.users[email], user.password == password else {
+        guard let user = LocalPersistence.shared.user(email: email),
+              user.password == password else {
             
             throw Error.invalidCredentials
         }
