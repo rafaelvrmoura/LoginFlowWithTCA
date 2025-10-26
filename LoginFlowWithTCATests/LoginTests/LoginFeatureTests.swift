@@ -1,5 +1,5 @@
 //
-//  LoginReducerTests.swift
+//  LoginFeatureTests.swift
 //  LoginFlowWithTCA
 //
 //  Created by Rafael Vieira Moura on 14/10/25.
@@ -11,7 +11,7 @@ import ComposableArchitecture
 @testable import LoginFlowWithTCA
 
 @MainActor
-struct LoginReducerTests {
+struct LoginFeatureTests {
     
     let store = TestStore(
         initialState: LoginReducer.State(),
@@ -181,6 +181,15 @@ struct LoginReducerTests {
         
         await store.send(.didTapLoginButton)
         await store.receive(.didLogin(.success(email + password)))
+    }
+    
+    @Test
+    func showSignupForm() async {
+        
+        await store.send(.didTapRegisterButton) { expectedState in
+            
+            expectedState.destination = .signupForm(SignupFormReducer.State())
+        }
     }
 }
 

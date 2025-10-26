@@ -7,11 +7,11 @@
 
 import Foundation
 
-struct UserModel {
+struct UserModel: Equatable {
  
-    let name: String
-    let email: String
-    let password: String
-    let preferredTheme: ThemeModel?
-    let photo: Data?
+    var name: String = ""
+    var email: String = ""
+    var password: String = ""
+    var preferredTheme: ThemeModel? = nil
+    var photo: Data? = nil
 }

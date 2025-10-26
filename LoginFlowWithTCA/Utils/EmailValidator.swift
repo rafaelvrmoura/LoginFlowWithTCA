@@ -14,8 +14,8 @@ struct EmailValidator {
 
     func isValid(email: String) -> Bool {
 
-        let emailPred = NSPredicate(format:"SELF MATCHES %@", self.regex)
-        return emailPred.evaluate(with: email)
+        let predicate = NSPredicate(format:"SELF MATCHES %@", self.regex)
+        return predicate.evaluate(with: email)
     }
 }
 

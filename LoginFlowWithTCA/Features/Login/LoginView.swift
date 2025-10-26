@@ -10,23 +10,34 @@ import ComposableArchitecture
 
 struct LoginView: View {
     
-    let store: StoreOf<LoginReducer>
+    @Bindable
+    var store: StoreOf<LoginReducer>
+    @State var passwordFieldVisible: Bool = false
     
     var body: some View {
         WithViewStore(self.store, observe: { $0 }) { viewStore in
             ScrollView {
                 VStack(alignment: .center) {
                     emailField(with: viewStore)
-                    .padding([.leading, .trailing])
+                        .padding([.leading, .trailing])
                     passwordField(with: viewStore)
-                    .padding([.leading, .trailing])
+                        .padding([.leading, .trailing])
                     forgotPasswordButton(with: viewStore)
-                    .padding([.leading, .trailing])
+                        .padding([.leading, .trailing])
                     buttonsStack(with: viewStore)
-                    .padding()
+                        .padding()
                 }
             }
             .defaultScrollAnchor(.center)
+        }
+        .sheet(
+            item: $store.scope(
+                state: \.destination?.signupForm,
+                 action: \.destination.signupForm
+            )
+        ) { signupFormStore in
+            
+            SignupFormView(store: signupFormStore)
         }
     }
     
@@ -114,14 +125,37 @@ struct LoginView: View {
     @ViewBuilder
     private func passwordField(with viewStore: ViewStoreOf<LoginReducer>) -> some View {
         
-        SecureField(
-            "Password",
-            text: viewStore.binding(
-                get: \.password,
-                send: { .didChangePassword($0) }
-            )
-        )
-        .textFieldStyle(.roundedBorder)
+        ZStack(alignment: .trailing) {
+            if passwordFieldVisible {
+                
+                TextField(
+                    "Password",
+                    text: viewStore.binding(
+                        get: \.password,
+                        send: { .didChangePassword($0) }
+                    )
+                )
+                .textFieldStyle(.roundedBorder)
+                
+            } else {
+                
+                SecureField(
+                    "Password",
+                    text: viewStore.binding(
+                        get: \.password,
+                        send: { .didChangePassword($0) }
+                    )
+                )
+                .textFieldStyle(.roundedBorder)
+            }
+            Button {
+                passwordFieldVisible.toggle()
+            } label: {
+                Image(systemName: passwordFieldVisible ? "lock.open" : "lock")
+                    .tint(.gray)
+            }
+            .padding(.trailing, 5)
+        }
     }
 }
 

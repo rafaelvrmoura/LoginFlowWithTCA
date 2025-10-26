@@ -20,15 +20,28 @@ struct LoginReducer {
         case emptyPassword
         case invalidCredentials
     }
+
+    @Reducer(state: .equatable, action: .equatable)
+    enum Destination {
+        
+        case signupForm(SignupFormReducer)
+    }
     
+    @ObservableState
     struct State: Equatable {
         
         var email: String = ""
         var emailStatus: InputStatus = .idle
         var password: String = ""
         var error: LoginError? = nil
+        
+        var signupFormState: SignupFormReducer.State? = nil
+        var isPresentingSignupForm = false
+        
+        @Presents var destination: Destination.State? = nil
     }
     
+    @CasePathable
     enum Action: Equatable {
         
         case didChangeEmail(String)
@@ -37,15 +50,29 @@ struct LoginReducer {
         case didTapForgotPasswordButton
         case didTapLoginButton
         case didTapRegisterButton
-        
         case didLogin(Result<AuthToken, LoginAPIClient.Error>)
+        
+        case destination(PresentationAction<Destination.Action>)
     }
     
     var body: some Reducer<State, Action> {
-        
+    
         Reduce { state, action in
             
             switch action {
+                
+            // Navigation State
+            case .destination:
+                return .none
+                
+            case .didTapRegisterButton:
+                state.destination = .signupForm(SignupFormReducer.State())
+                return .none
+                
+            case .didTapForgotPasswordButton:
+                return .none
+                
+            // View State
             case .didChangeEmail(let email):
                 state.email = email
                 state.emailStatus = emailValidator.isValid(email: email) ? .valid : .idle
@@ -77,6 +104,7 @@ struct LoginReducer {
             case .didLogin(let loginResult):
                 switch loginResult {
                 case .success(let token): // TODO: Get user with token
+                    print("## TOKEN \(token)")
                     state.error = nil
                     return .none
                 case .failure(let error):
@@ -85,10 +113,9 @@ struct LoginReducer {
                     }
                     return .none
                 }
-            case .didTapForgotPasswordButton: return .none // TODO: Navigate
-            case .didTapRegisterButton: return .none // TODO: Navigate
             }
         }
+        .ifLet(\.$destination, action: \.destination)
     }
 }
 

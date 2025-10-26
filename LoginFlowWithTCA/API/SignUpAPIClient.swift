@@ -9,6 +9,10 @@ import ComposableArchitecture
 
 struct SignUpAPIClient {
     
+    enum Error: Swift.Error, Equatable {
+        case unknown
+    }
+    
     var createUser: (UserModel) async throws -> UserModel
     
     static var live = SignUpAPIClient { userModel in
