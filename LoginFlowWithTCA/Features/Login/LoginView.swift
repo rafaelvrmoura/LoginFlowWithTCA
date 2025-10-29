@@ -18,6 +18,8 @@ struct LoginView: View {
         WithViewStore(self.store, observe: { $0 }) { viewStore in
             ScrollView {
                 VStack(alignment: .center) {
+                    Text("TCA")
+                        .font(Font.system(size: 100).bold())
                     emailField(with: viewStore)
                         .padding([.leading, .trailing])
                     passwordField(with: viewStore)
@@ -70,11 +72,14 @@ struct LoginView: View {
         }) {
             Text("Login")
                 .foregroundStyle(.white)
-                .frame(width: 200, height: 50)
-                .background {
-                    Color.blue
-                }
+                .font(.title2)
+                .fontWeight(.bold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 5)
         }
+        .buttonStyle(.glass)
+        .glassEffect(.regular.tint(.blue))
+        .padding(.horizontal, 20)
     }
     
     @ViewBuilder
@@ -83,15 +88,20 @@ struct LoginView: View {
             viewStore.send(.didTapRegisterButton)
         }) {
             Text("Create Account")
-                .frame(width: 200, height: 50)
-                .border(.blue)
+                .foregroundStyle(.white)
+                .font(.title2)
+                .fontWeight(.bold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 5)
         }
+        .buttonStyle(.glass)
+        .glassEffect(.regular.tint(.gray))
+        .padding(.horizontal, 20)
     }
     
     //MARK: - Email field
     @ViewBuilder
     private func emailField(with viewStore: ViewStoreOf<LoginReducer>) -> some View {
-        
         ZStack(alignment: .trailing) {
             TextField(
                 "Email",
