@@ -7,11 +7,12 @@
 
 import Foundation
 
-struct UserModel: Equatable {
+struct UserModel: Codable, Equatable {
  
+    var id: String? = nil
     var name: String = ""
     var email: String = ""
     var password: String = ""
     var preferredTheme: ThemeModel? = nil
-    var photo: Data? = nil
+    var profilePictureURL: URL? = nil
 }

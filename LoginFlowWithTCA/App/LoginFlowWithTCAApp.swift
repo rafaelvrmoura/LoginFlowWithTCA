@@ -15,10 +15,6 @@ struct LoginFlowWithTCAApp: App {
         initialState: .init(),
         reducer: {
             RootReducer()
-        },
-        withDependencies: {
-            $0.emailValidator = .liveValue
-            $0.loginAPIClient = .liveValue
         }
     )
 

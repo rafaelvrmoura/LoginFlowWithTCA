@@ -5,22 +5,32 @@
 //  Created by Rafael Vieira Moura on 16/10/25.
 //
 
-import UIKit
-import PhotosUI
+import SwiftUI
 import ComposableArchitecture
 
 @Reducer
 struct SignupFormReducer {
     
-    @Dependency(\.signUpAPI) var apiClient
+    @Dependency(\.usersAPI) var apiClient
     @Dependency(\.emailValidator) var emailValidator
     @Dependency(\.passwordValidator) var passwordValidator
     @Dependency(\.dismiss) var dismiss
  
+    @Reducer(state: .equatable, action: .equatable)
+    enum Destination {
+        
+        case alert(AlertState<Alert>)
+        
+        @CasePathable
+        enum Alert {
+            
+            case confirm
+        }
+    }
+    
     @ObservableState
     struct State: Equatable {
         
-        var photoPickerState: PhotoPickerReducer.State = .init()
         var name: String = ""
         var email: String = ""
         var emailStatus: InputStatus = .idle
@@ -29,7 +39,8 @@ struct SignupFormReducer {
         var passwordConfirmation: String = ""
         var passwordConfirmationStatus: InputStatus = .idle
         var isLoading: Bool = false
-        var error: SignUpAPIClient.Error? = nil
+        
+        @Presents var destination: Destination.State?
     }
     
     @CasePathable
@@ -41,10 +52,10 @@ struct SignupFormReducer {
         case didSubmitPasswordConfirmation
         case didChangeEmail(String)
         case didSubmitEmail
-        case photoPickerAction(PhotoPickerReducer.Action)
         case didTapSignupButton
-        case didSignup(Result<UserModel, SignUpAPIClient.Error>)
+        case didSignup(Result<UserModel, NSError>)
         
+        case destination(PresentationAction<Destination.Action>)
         case binding(BindingAction<State>)
     }
     
@@ -65,14 +76,18 @@ struct SignupFormReducer {
                     return .run { send in await send(.didChangePasswordConfirmation(newValue)) }
                 }
             }
-        Scope(state: \.photoPickerState,
-              action: \.photoPickerAction,
-              child: {
-          PhotoPickerReducer()
-        })
         Reduce { state, action in
             
             switch action {
+                
+            case .destination(.presented(.alert(let alertAction))):
+                switch alertAction {
+                case .confirm:
+                    return .run { _ in await dismiss() }
+                }
+                
+            case .destination:
+                return .none
                 
             case .binding:
                 return .none
@@ -105,11 +120,7 @@ struct SignupFormReducer {
                                                                      .valid : .invalid
                 return .none
                 
-            case .photoPickerAction:
-                return .none
-                
             case .didTapSignupButton:
-                
                 if state.emailStatus != .valid {
                     state.emailStatus = .invalid
                 }
@@ -129,27 +140,23 @@ struct SignupFormReducer {
                     return .none
                 }
                 
-                var photoData: Data?
-                
-                if case .loaded(let image) = state.photoPickerState.selectionState {
-                    photoData = image.pngData()
-                }
-                
                 let userModel = UserModel(
                     name: state.name,
                     email: state.email,
                     password: state.password,
-                    photo: photoData
                 )
                 
                 state.isLoading = true
                 return .run { send in
                     
                     do {
-                        let recordedUser = try await self.apiClient.createUser(userModel)
-                        await send(.didSignup(.success(recordedUser)))
+                        let user = try await self.apiClient.create(user: userModel)
+                        
+                        await send(.didSignup(.success(user)))
+                        
                     } catch {
-                        await send(.didSignup(.failure(SignUpAPIClient.Error.unknown)))
+                        
+                        await send(.didSignup(.failure(error as NSError)))
                     }
                 }
                 
@@ -159,10 +166,19 @@ struct SignupFormReducer {
                 case .success:
                     return .run { _ in await dismiss() }
                 case .failure(let error):
-                    state.error = error
+                    state.destination = .alert(AlertState {
+                        TextState("Error")
+                    } actions: {
+                        ButtonState(action: .confirm) {
+                          TextState("Ok")
+                        }
+                    } message: {
+                        TextState(error.localizedDescription)
+                    })
                     return .none
                 }
             }
         }
+        .ifLet(\.$destination, action: \.destination)
     }
 }

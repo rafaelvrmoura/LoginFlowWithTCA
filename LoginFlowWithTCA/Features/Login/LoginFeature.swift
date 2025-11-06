@@ -5,26 +5,34 @@
 //  Created by Rafael Vieira Moura on 13/10/25.
 //
 
+import SwiftUI
 import ComposableArchitecture
 
 @Reducer
 struct LoginReducer {
     
+    enum LoginError: Error, Equatable {
+        
+        case invalidCredentials
+        case underlying(NSError)
+    }
+    
     @Dependency(\.emailValidator) var emailValidator
     @Dependency(\.core) var core
     @Dependency(\.loginAPIClient) var apiClient
+    @Dependency(\.dismiss) var dismiss
     
-    enum LoginError: Error {
-        
-        case invalidEmail
-        case emptyPassword
-        case invalidCredentials
-    }
-
     @Reducer(state: .equatable, action: .equatable)
     enum Destination {
         
         case signupForm(SignupFormReducer)
+        case alert(AlertState<Alert>)
+        
+        @CasePathable
+        enum Alert {
+            
+            case confirm
+        }
     }
     
     @ObservableState
@@ -33,10 +41,9 @@ struct LoginReducer {
         var email: String = ""
         var emailStatus: InputStatus = .idle
         var password: String = ""
-        var error: LoginError? = nil
+        var isLoading: Bool = false
         
         var signupFormState: SignupFormReducer.State? = nil
-        var isPresentingSignupForm = false
         
         @Presents var destination: Destination.State? = nil
     }
@@ -50,18 +57,25 @@ struct LoginReducer {
         case didTapForgotPasswordButton
         case didTapLoginButton
         case didTapRegisterButton
-        case didLogin(Result<AuthToken, LoginAPIClient.Error>)
+        case didLogin(Result<AuthResult, LoginError>)
+        case dismissSigupForm
         
         case destination(PresentationAction<Destination.Action>)
     }
     
     var body: some Reducer<State, Action> {
-    
         Reduce { state, action in
             
             switch action {
                 
             // Navigation State
+            case .destination(.presented(.alert(let alertAction))):
+                switch alertAction {
+                case .confirm:
+                    state.destination = nil
+                    return .none
+                }
+                
             case .destination:
                 return .none
                 
@@ -86,36 +100,66 @@ struct LoginReducer {
                 state.password = password
                 return .none
                 
+            case .dismissSigupForm:
+                state.destination = nil
+                return .none
+                
             case .didTapLoginButton:
                 
                 guard state.emailStatus == .valid else {
-                    state.error = .invalidEmail
                     return .none
                 }
                 
                 guard state.password.isEmpty == false else {
-                    state.error = .emptyPassword
                     return .none
                 }
                 
-                state.error = nil
+                state.isLoading = true
                 return self.loginEffect(email: state.email, password: state.password)
                 
             case .didLogin(let loginResult):
+                
+                state.isLoading = false
+                
                 switch loginResult {
-                case .success(let token): // TODO: Get user with token
-                    print("## TOKEN \(token)")
-                    state.error = nil
+                case .success(let authResult): // TODO: Get user with token
+                    state.destination = .alert(AlertState{
+                        TextState("Success")
+                    } actions: {
+                        ButtonState(action: .confirm) {
+                            TextState("Ok")
+                        }
+                    } message: {
+                        TextState("Loged in with token \n \(authResult.token)")
+                    })
                     return .none
                 case .failure(let error):
-                    if case .invalidCredentials = error {
-                        state.error = .invalidCredentials
-                    }
+                    state.destination = .alert(AlertState.alert(for: error))
                     return .none
                 }
             }
         }
         .ifLet(\.$destination, action: \.destination)
+    }
+}
+
+extension AlertState where Action == LoginReducer.Destination.Alert {
+    
+    static func alert(for error: LoginReducer.LoginError)-> Self {
+        AlertState{
+            TextState("Error")
+        } actions: {
+            ButtonState(action: .confirm) {
+                TextState("Ok")
+            }
+        } message: {
+            switch error {
+            case .invalidCredentials:
+                TextState("Invalid email or password")
+            case .underlying(let nsError):
+                TextState(nsError.localizedDescription)
+            }
+        }
     }
 }
 
@@ -129,18 +173,17 @@ private extension LoginReducer {
             
             do {
                 
-                let authToken = try await self.apiClient.loginRequest(
-                    LoginRequestModel(
-                        email: email,
-                        password: password
-                    )
-                )
+                let authToken = try await self.apiClient.login(email: email, password: password)
                 
                 return await send(.didLogin(.success(authToken)))
                 
-            } catch LoginAPIClient.Error.invalidCredentials {
+            } catch APIClientError.failed(statusCode: 401) {
                 
                 return await send(.didLogin(.failure(.invalidCredentials)))
+                
+            } catch {
+                
+                return await send(.didLogin(.failure(.underlying(error as NSError))))
             }
         }
     }
