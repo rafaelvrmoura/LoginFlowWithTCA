@@ -12,9 +12,15 @@ import JWT
 struct LoginController: RouteCollection {
     func boot(routes: any Vapor.RoutesBuilder) throws {
         
-        let loginRoute = routes.grouped("login")
-        loginRoute.post(use: login)
-        loginRoute.delete(use: logout)
+        let v1 = routes.grouped("v1")
+        
+        v1.group("login") {
+            $0.post(use: login)
+        }
+        
+        v1.group("logout") {
+            $0.delete(use: logout)
+        }
     }
     
     func login(req: Request) async throws -> AuthResult {

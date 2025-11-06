@@ -18,7 +18,6 @@ struct SignupFormView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             Form {
-                photoSelectionView()
                 nameField()
                 emailField()
                 passwordField()
@@ -26,6 +25,10 @@ struct SignupFormView: View {
             }
             signUpButton()
         }
+        .alert(
+            $store.scope(
+                state: \.destination?.alert,
+                action: \.destination.alert))
         .overlay {
             if store.isLoading {
                 ZStack {
@@ -55,37 +58,6 @@ struct SignupFormView: View {
         .glassEffect(.regular.tint(.blue))
         .tint(.white)
         .padding()
-    }
-    
-    @ViewBuilder
-    private func photoSelectionView() -> some View {
-        
-        PhotoPickerView(
-            store: store.scope(
-                state: \.photoPickerState,
-                action: \.photoPickerAction
-            )
-        ) {
-            
-            switch store.photoPickerState.selectionState {
-            case .empty:
-                Image(systemName: "person.crop.circle")
-                    .resizable()  
-            case .loading:
-                ProgressView()
-            case .loaded(let image):
-                Image(uiImage: image)
-                    .resizable()
-            case .error:
-                Image(systemName: "person.crop.circle.badge.xmark")
-                    .resizable()
-                    .tint(.red)
-            }
-        }
-        .frame(width: 100,
-               height: 100)
-        .cornerRadius(50)
-        .frame(maxWidth: .infinity, alignment: .center)
     }
     
     @ViewBuilder
@@ -188,18 +160,27 @@ struct SignupFormView: View {
     }
 }
 
+private struct UsersAPIMock: UsersAPIProtocol {
+    
+    typealias API = UsersAPI
+    
+    func create(user: UserModel) async throws -> UserModel {
+        throw NSError()
+    }
+    
+    var delegate: (any APIClientDelegate)?
+}
+
 #Preview {
     NavigationStack {
         SignupFormView(
             store: Store(
-                initialState: .init(isLoading: false),
+                initialState: .init(),
                 reducer: {
                     SignupFormReducer()
                 },
                 withDependencies: {
-                    $0.signUpAPI = SignUpAPIClient {
-                        return $0
-                    }
+                    $0.usersAPI = UsersAPIMock()
                     $0.emailValidator = EmailValidator()
                     $0.passwordValidator = PasswordValidator()
                 }

@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 
-enum ThemeModel: String, CaseIterable, Equatable, Identifiable {
+enum ThemeModel: String, Codable, CaseIterable, Equatable, Identifiable {
   case bubblegum
   case buttercup
   case indigo

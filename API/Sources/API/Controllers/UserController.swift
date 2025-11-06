@@ -12,22 +12,26 @@ struct UserController: RouteCollection {
     
     func boot(routes: any RoutesBuilder) throws {
         
-        let users = routes.grouped("users")
+        let users = routes.grouped("v1", "users")
         
         users.post(use: create)
         
-        users.group(":userId") { users in
-            users.get(use: getById)
-            users.patch(use: update)
-            users.delete(use: delete)
+        users.group(":userId") {
+            $0.get(use: getById)
+            $0.patch(use: update)
+            $0.delete(use: delete)
         }
         
-        users.group("me") { meRoute in
-            meRoute.get(use: me)
+        users.group("me") {
+            $0.get(use: me)
         }
         
-        users.group(":userId", "profile-picture") { pictures in
-            pictures.on(.POST, body: .collect(maxSize: "50mb"), use: uploadPicture)
+        users.group(":userId", "profile-picture") {
+            $0.on(
+                .POST,
+                body: .collect(maxSize: "50mb"),
+                use: uploadPicture
+            )
         }
     }
     
@@ -104,7 +108,7 @@ struct UserController: RouteCollection {
         return .noContent
     }
     
-    func uploadPicture(req: Request) async throws -> HTTPStatus {
+    func uploadPicture(req: Request) async throws -> String {
 
         try await req.authenticate()
         
@@ -122,10 +126,12 @@ struct UserController: RouteCollection {
         let path = req.application.uploadsDirectory + filename
         try await req.fileio.writeFile(imageData, at: path)
         
-        user.profilePictureURL = req.application.uploadsURL + filename
+        let url = req.application.uploadsURL + filename
+        
+        user.profilePictureURL = url
         
         try await user.update(on: req.db)
         
-        return .created
+        return url
     }
 }

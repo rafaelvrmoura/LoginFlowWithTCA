@@ -12,7 +12,7 @@ struct LoginView: View {
     
     @Bindable
     var store: StoreOf<LoginReducer>
-    @State var passwordFieldVisible: Bool = false
+    @State private var passwordFieldVisible: Bool = false
     
     var body: some View {
         WithViewStore(self.store, observe: { $0 }) { viewStore in
@@ -22,6 +22,7 @@ struct LoginView: View {
                         .font(Font.system(size: 100).bold())
                     emailField(with: viewStore)
                         .padding([.leading, .trailing])
+                        .padding(.bottom, 5)
                     passwordField(with: viewStore)
                         .padding([.leading, .trailing])
                     forgotPasswordButton(with: viewStore)
@@ -30,16 +31,44 @@ struct LoginView: View {
                         .padding()
                 }
             }
+            .overlay {
+                if viewStore.isLoading {
+                    ZStack {
+                        Color.black.opacity(0.7)
+                        ProgressView()
+                            .tint(.white)
+                    }
+                    .allowsHitTesting(true)
+                    .ignoresSafeArea()
+                    
+                }
+            }
             .defaultScrollAnchor(.center)
         }
+        .alert(
+            $store.scope(
+                state: \.destination?.alert,
+                action: \.destination.alert))
         .sheet(
             item: $store.scope(
                 state: \.destination?.signupForm,
                  action: \.destination.signupForm
             )
         ) { signupFormStore in
-            
-            SignupFormView(store: signupFormStore)
+            NavigationStack {
+                SignupFormView(store: signupFormStore)
+                    .toolbar {
+                        ToolbarItem(
+                            placement: .cancellationAction
+                        ) {
+                            Button(action: {
+                                store.send(.dismissSigupForm)
+                            }) {
+                                Image(systemName: "xmark")
+                            }
+                        }
+                    }
+            }
         }
     }
     
@@ -169,6 +198,16 @@ struct LoginView: View {
     }
 }
 
+private struct LoginMock: LoginAPIProtocol {
+    typealias API = LoginAPI
+    var delegate: (any APIClientDelegate)?
+    func login(email: String, password: String) async throws -> AuthResult {
+        throw APIClientError.failed(statusCode: 300)
+    }
+    
+    func logout() async throws { }
+}
+
 #Preview {
     LoginView(
         store: Store(
@@ -178,9 +217,7 @@ struct LoginView: View {
             },
             withDependencies: {
                 $0.emailValidator = .liveValue
-                $0.loginAPIClient = LoginAPIClient {
-                    return $0.email + $0.password
-                }
+                $0.loginAPIClient = LoginMock()
             }
         )
     )

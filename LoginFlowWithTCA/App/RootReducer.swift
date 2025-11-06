@@ -10,7 +10,7 @@ import ComposableArchitecture
 struct CoreEnvironment {
     
     var loggedInUser: UserModel?
-    var authToken: AuthToken?
+    var authToken: String?
 }
 
 extension CoreEnvironment: DependencyKey {
@@ -22,11 +22,12 @@ extension CoreEnvironment: DependencyKey {
     
     static var dev: CoreEnvironment {
        
-        .init(loggedInUser: UserModel(name: "User Test",
+        .init(loggedInUser: UserModel(id:nil,
+                                      name: "User Test",
                                       email: "email@test.com",
                                       password: "password",
                                       preferredTheme: nil,
-                                      photo: nil))
+                                      profilePictureURL: nil))
     }
 }
 
@@ -41,6 +42,8 @@ extension DependencyValues {
 
 @Reducer
 struct RootReducer {
+    
+    @Dependency(\.core) var core
     
     struct State: Equatable {
         
